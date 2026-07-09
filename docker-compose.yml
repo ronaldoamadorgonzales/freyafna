@@ -1,19 +1,6 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: kintsugi-postgres
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: kintsugi_db
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
   app:
     build:
       context: .
@@ -23,10 +10,11 @@ services:
     ports:
       - "3005:3000"
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/kintsugi_db
+      - DATABASE_URL=postgres://postgres:postgres_secure_password_123@shared-postgres:5432/kintsugi_db
       - NODE_ENV=production
-    depends_on:
-      - db
+    networks:
+      - netowaku-app-network
 
-volumes:
-  postgres_data:
+networks:
+  netowaku-app-network:
+    external: true
