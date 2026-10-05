@@ -5,14 +5,28 @@ import { db } from "@/lib/db/db";
 import { advisors } from "@/lib/db/schema";
 import { eq, ilike, and } from "drizzle-orm";
 
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
+const CHROMIUM_PACK_URL =
+  process.env.CHROMIUM_PACK_URL ||
+  "https://github.com/Sparticuz/chromium/releases/download/v153.0.0/chromium-v153.0.0-pack.x64.tar";
+
 async function getBrowser() {
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    const executablePath = await chromium.executablePath();
+    chromium.setGraphicsMode = false;
+    let executablePath: string;
+    try {
+      executablePath = await chromium.executablePath();
+    } catch {
+      executablePath = await chromium.executablePath(CHROMIUM_PACK_URL);
+    }
+
     return await puppeteerCore.launch({
       args: chromium.args,
-      defaultViewport: (chromium as any).defaultViewport,
+      defaultViewport: { width: 1200, height: 800 },
       executablePath,
-      headless: (chromium as any).headless,
+      headless: "shell",
     });
   }
 
@@ -29,12 +43,19 @@ async function getBrowser() {
       ],
     });
   } catch {
-    const executablePath = await chromium.executablePath();
+    chromium.setGraphicsMode = false;
+    let executablePath: string;
+    try {
+      executablePath = await chromium.executablePath();
+    } catch {
+      executablePath = await chromium.executablePath(CHROMIUM_PACK_URL);
+    }
+
     return await puppeteerCore.launch({
       args: chromium.args,
-      defaultViewport: (chromium as any).defaultViewport,
+      defaultViewport: { width: 1200, height: 800 },
       executablePath,
-      headless: (chromium as any).headless,
+      headless: "shell",
     });
   }
 }
@@ -94,8 +115,10 @@ export async function POST(request: Request) {
     });
 
     // Launch Headless Chromium (Universal: Vercel Serverless / Local Docker)
-    const browser = await getBrowser();
-    const page = await browser.newPage();
+    let browser: any = null;
+    try {
+      browser = await getBrowser();
+      const page = await browser.newPage();
 
     // Calculate dynamic values for the PDF template based on custom user inputs
     const initialSavingsVal = Number(inputs.initialSavings || 0);
@@ -437,16 +460,19 @@ export async function POST(request: Request) {
       margin: { top: "10px", bottom: "10px", left: "15px", right: "15px" },
     });
 
-    await browser.close();
-
-    // Return PDF Response
-    return new Response(Buffer.from(pdfBuffer), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="FreyaFNA_Report_${name.replace(/\s+/g, "_")}.pdf"`,
-      },
-    });
+      // Return PDF Response
+      return new Response(Buffer.from(pdfBuffer), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="FreyaFNA_Report_${name.replace(/\s+/g, "_")}.pdf"`,
+        },
+      });
+    } finally {
+      if (browser) {
+        await browser.close().catch(() => {});
+      }
+    }
   } catch (error: any) {
     console.error("PDF Generation Error:", error);
     return NextResponse.json({ error: error?.message || "Internal server error." }, { status: 500 });
