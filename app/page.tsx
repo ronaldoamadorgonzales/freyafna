@@ -1781,48 +1781,47 @@ export default function Home() {
       </main>
 
       {/* 48-Hour Deep-Dive Insights Prompt Modal */}
-      {showInsightsModal && insightsUrl && (
+      {showInsightsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-800 text-white max-w-lg w-full p-6 sm:p-8 rounded-3xl shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-teal-600/10 text-teal-400 rounded-xl flex items-center justify-center border border-teal-500/20">
-                <Sparkles className="w-5 h-5" />
+                <Mail className="w-5 h-5" />
               </div>
               <div>
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-teal-400 bg-teal-600/10 px-2 py-0.5 rounded-full">
-                  VIP Extended Access
+                  Check Your Inbox
                 </span>
-                <h3 className="text-xl font-black text-white mt-1">48-Hour Deep-Dive Insights Ready</h3>
+                <h3 className="text-xl font-black text-white mt-1">Extended Strategy Brief Emailed</h3>
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-300 mb-6 leading-relaxed">
-              We&apos;ve unlocked your full multi-module FNA dashboard below, and also generated an <strong>Extended Strategy Brief</strong> with inflation stress-testing and prioritized action steps.
+            <p className="text-xs sm:text-sm text-slate-300 mb-5 leading-relaxed">
+              Your personalized <strong>48-Hour Deep-Dive Strategy Brief</strong> has been generated and dispatched directly to your email.
             </p>
 
-            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-6 space-y-2 text-xs">
-              <div className="flex items-center gap-2 text-amber-400 font-bold">
-                <Clock className="w-4 h-4" />
-                <span>Active 48-Hour Secure Access Link</span>
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-6 space-y-3">
+              <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800">
+                <span className="text-slate-400">Destination:</span>
+                <span className="font-mono font-bold text-teal-400">{email || "Your Registered Email"}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800">
+                <span className="text-slate-400">Email Subject:</span>
+                <span className="text-slate-200 font-semibold truncate max-w-[240px]">Your 48-Hour VIP Strategy Brief</span>
+              </div>
+              <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold pt-1">
+                <Clock className="w-4 h-4 shrink-0" />
+                <span>Secure access link active for 48 hours</span>
               </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                You can view your deep-dive diagnostic now, and a copy has also been indexed for your assigned advisor <strong>{advisor?.fullName || "Freya Gonzales"}</strong>.
+                Please check your email inbox (including your Spam or Promotions folder) to open your brief. A copy has also been routed to your assigned advisor <strong>{advisor?.fullName || "Freya Gonzales"}</strong>.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href={insightsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-black transition shadow-lg shadow-teal-900/40"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Open Extended Strategy Brief
-              </a>
+            <div className="flex">
               <button
                 onClick={() => setShowInsightsModal(false)}
-                className="px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition"
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-black transition shadow-lg shadow-teal-900/40"
               >
                 Continue to Dashboard
               </button>
