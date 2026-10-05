@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core", "puppeteer"],
   async redirects() {
     return [
       {
