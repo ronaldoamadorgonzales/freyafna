@@ -17,7 +17,11 @@ import {
   Calculator, 
   Info,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Clock,
+  ExternalLink,
+  Mail,
+  Phone
 } from "lucide-react";
 
 export default function Home() {
@@ -31,6 +35,24 @@ export default function Home() {
     visible: false
   });
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+
+  // Advisor referral and profile state
+  const [advisor, setAdvisor] = useState<{
+    id?: string;
+    fullName: string;
+    email: string;
+    phone?: string;
+    advisorCode?: string;
+    title?: string;
+    avatarUrl?: string | null;
+    isDefault?: boolean;
+    calendlyUrl?: string;
+    linkedinUrl?: string;
+  } | null>(null);
+
+  // Time-limited insights link
+  const [insightsUrl, setInsightsUrl] = useState<string | null>(null);
+  const [showInsightsModal, setShowInsightsModal] = useState(false);
 
   // Form inputs
   const [name, setName] = useState("");
@@ -137,6 +159,26 @@ export default function Home() {
     }, 4000);
   };
 
+  // Fetch Advisor details by URL query parameter (?ref=... or ?code=...)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("ref") || params.get("code") || params.get("advisor") || "";
+
+    async function loadAdvisor() {
+      try {
+        const res = await fetch(`/api/advisor/public?code=${encodeURIComponent(code)}`);
+        const json = await res.json();
+        if (json.success && json.advisor) {
+          setAdvisor(json.advisor);
+        }
+      } catch (err) {
+        console.error("Failed to load advisor:", err);
+      }
+    }
+
+    loadAdvisor();
+  }, []);
+
   // Live update of Milestone calculations & Chart update
   useEffect(() => {
     const p = initialSavings;
@@ -175,7 +217,7 @@ export default function Home() {
         if (!milestoneChartInstance.current) {
           // Create Gradient
           const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, "rgba(20, 184, 166, 0.4)"); // teal-500
+          gradient.addColorStop(0, "rgba(20, 184, 166, 0.4)"); // deep navy blue
           gradient.addColorStop(1, "rgba(20, 184, 166, 0.0)");
 
           milestoneChartInstance.current = new Chart(milestoneChartRef.current, {
@@ -184,7 +226,7 @@ export default function Home() {
               labels,
               datasets: [{
                 label: "Projected Value (₱)",
-                borderColor: "#0f766e", // teal-700
+                borderColor: "#0f766e", // blue-900
                 backgroundColor: gradient,
                 borderWidth: 3,
                 pointBackgroundColor: "#ffffff",
@@ -407,6 +449,7 @@ export default function Home() {
         name,
         email,
         mobile,
+        advisorCode: advisor?.advisorCode || undefined,
         inputs: {
           initialSavings,
           monthlyContribution,
@@ -463,10 +506,17 @@ export default function Home() {
         throw new Error(errData.error || "Failed to submit lead data.");
       }
 
+      const resData = await response.json();
+      if (resData.insightsUrl) {
+        setInsightsUrl(resData.insightsUrl);
+      }
+
       triggerToast("Sync Complete", "Dynamic scores and gaps saved successfully.");
+      return resData.insightsUrl as string | undefined;
     } catch (err: any) {
       console.error(err);
       triggerToast("Sync Error", err?.message || "Something went wrong.");
+      return undefined;
     } finally {
       setIsSaving(false);
     }
@@ -487,10 +537,20 @@ export default function Home() {
   const handlePdfDownload = async () => {
     setIsPdfGenerating(true);
     try {
+      // Sync latest numbers to update lead record and refresh insights token
+      let latestInsightsUrl = insightsUrl;
+      try {
+        const url = await saveAssessment();
+        if (url) latestInsightsUrl = url;
+      } catch (e) {
+        console.warn("Could not resync before pdf generation:", e);
+      }
+
       const payload = {
         name,
         email,
         mobile,
+        advisorCode: advisor?.advisorCode || undefined,
         inputs: {
           initialSavings,
           monthlyContribution,
@@ -555,6 +615,13 @@ export default function Home() {
       window.URL.revokeObjectURL(url);
 
       triggerToast("Report Generated!", "Your PDF report was downloaded successfully.");
+
+      // Present the 48-Hour Deep-Dive Strategy Brief modal after PDF download
+      if (latestInsightsUrl || insightsUrl) {
+        setTimeout(() => {
+          setShowInsightsModal(true);
+        }, 800);
+      }
     } catch (err: any) {
       console.error(err);
       triggerToast("PDF Error", "Failed to compile the report.");
@@ -597,29 +664,29 @@ export default function Home() {
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 py-4 px-4 sm:px-6 lg:px-8 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => scrollToSection("hero")}>
-            <div className="w-10 h-10 bg-teal-800 rounded-xl flex items-center justify-center text-white font-extrabold text-2xl shadow-inner">
+            <div className="w-10 h-10 bg-teal-700 rounded-xl flex items-center justify-center text-white font-extrabold text-2xl shadow-inner">
               F
             </div>
             <div className="flex flex-col">
-              <span className="font-extrabold text-xl tracking-tight text-teal-950 leading-none">
-                Freya<span className="text-teal-600">FNA</span>
+              <span className="font-extrabold text-xl tracking-tight text-slate-950 leading-none">
+                Freya<span className="text-teal-700">FNA</span>
               </span>
               <span className="text-xs text-slate-500 font-medium">Financial Needs Analysis</span>
             </div>
           </div>
           
           <div className="hidden md:flex space-x-8 text-sm font-semibold text-slate-600">
-            <button onClick={() => scrollToSection("how-it-works")} className="hover:text-teal-800 transition duration-200 cursor-pointer">
+            <button onClick={() => scrollToSection("how-it-works")} className="hover:text-teal-700 transition duration-200 cursor-pointer">
               How it Works
             </button>
-            <button onClick={() => scrollToSection("about")} className="hover:text-teal-800 transition duration-200 cursor-pointer">
+            <button onClick={() => scrollToSection("about")} className="hover:text-teal-700 transition duration-200 cursor-pointer">
               Advisor Profile
             </button>
           </div>
           
           <button 
             onClick={() => scrollToSection("calculator-section")} 
-            className="bg-teal-800 hover:bg-teal-900 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition duration-200 shadow-md shadow-teal-900/10 cursor-pointer"
+            className="bg-teal-700 hover:bg-teal-800 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition duration-200 shadow-md shadow-teal-900/10 cursor-pointer"
           >
             Start Analysis
           </button>
@@ -633,12 +700,12 @@ export default function Home() {
         <section id="hero" className="relative bg-gradient-to-br from-teal-950 via-teal-900 to-teal-800 py-24 md:py-36 px-4 sm:px-6 lg:px-8 overflow-hidden">
           {/* Decorative gradients */}
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-            <div className="absolute -top-24 -left-24 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 right-10 w-3/4 h-3/4 bg-teal-800/40 rounded-full blur-3xl transform translate-y-1/3"></div>
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-teal-600/10 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 right-10 w-3/4 h-3/4 bg-teal-700/40 rounded-full blur-3xl transform translate-y-1/3"></div>
           </div>
           
           <div className="relative z-10 max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 py-1.5 px-4 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20 text-xs font-bold tracking-wider mb-8 uppercase animate-pulse">
+            <div className="inline-flex items-center gap-2 py-1.5 px-4 rounded-full bg-teal-600/10 text-teal-300 border border-teal-500/20 text-xs font-bold tracking-wider mb-8 uppercase animate-pulse">
               <Sparkles className="w-3.5 h-3.5 text-teal-400" />
               Free Interactive Diagnostic
             </div>
@@ -654,7 +721,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button 
                 onClick={() => scrollToSection("calculator-section")} 
-                className="w-full sm:w-auto bg-white text-teal-950 hover:bg-slate-50 px-8 py-4 rounded-2xl font-bold text-lg transition duration-300 shadow-xl shadow-teal-950/20 transform hover:-translate-y-0.5 cursor-pointer"
+                className="w-full sm:w-auto bg-white text-slate-950 hover:bg-slate-50 px-8 py-4 rounded-2xl font-bold text-lg transition duration-300 shadow-xl shadow-slate-950/20 transform hover:-translate-y-0.5 cursor-pointer"
               >
                 Analyze Savings Growth
               </button>
@@ -677,7 +744,7 @@ export default function Home() {
             <div className="grid md:grid-cols-4 gap-8">
               {/* Step 1 */}
               <div className="relative p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="w-12 h-12 bg-teal-100 text-teal-800 rounded-xl flex items-center justify-center font-black text-xl mb-6 shadow-inner">
+                <div className="w-12 h-12 bg-teal-100 text-teal-700 rounded-xl flex items-center justify-center font-black text-xl mb-6 shadow-inner">
                   1
                 </div>
                 <h3 className="font-bold text-lg text-slate-900 mb-2">Test Your Trajectory</h3>
@@ -686,7 +753,7 @@ export default function Home() {
 
               {/* Step 2 */}
               <div className="relative p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="w-12 h-12 bg-teal-100 text-teal-800 rounded-xl flex items-center justify-center font-black text-xl mb-6 shadow-inner">
+                <div className="w-12 h-12 bg-teal-100 text-teal-700 rounded-xl flex items-center justify-center font-black text-xl mb-6 shadow-inner">
                   2
                 </div>
                 <h3 className="font-bold text-lg text-slate-900 mb-2">Register Your Details</h3>
@@ -695,7 +762,7 @@ export default function Home() {
 
               {/* Step 3 */}
               <div className="relative p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="w-12 h-12 bg-teal-100 text-teal-800 rounded-xl flex items-center justify-center font-black text-xl mb-6 shadow-inner">
+                <div className="w-12 h-12 bg-teal-100 text-teal-700 rounded-xl flex items-center justify-center font-black text-xl mb-6 shadow-inner">
                   3
                 </div>
                 <h3 className="font-bold text-lg text-slate-900 mb-2">View Financial Scorecard</h3>
@@ -704,7 +771,7 @@ export default function Home() {
 
               {/* Step 4 */}
               <div className="relative p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="w-12 h-12 bg-teal-100 text-teal-800 rounded-xl flex items-center justify-center font-black text-xl mb-6 shadow-inner">
+                <div className="w-12 h-12 bg-teal-100 text-teal-700 rounded-xl flex items-center justify-center font-black text-xl mb-6 shadow-inner">
                   4
                 </div>
                 <h3 className="font-bold text-lg text-slate-900 mb-2">Get Actionable PDF</h3>
@@ -735,7 +802,7 @@ export default function Home() {
                 <div>
                   <div className="flex justify-between items-end mb-3">
                     <label className="font-bold text-slate-700 text-xs uppercase tracking-wider">Initial Savings</label>
-                    <span className="text-teal-800 font-extrabold text-lg">₱{initialSavings.toLocaleString()}</span>
+                    <span className="text-teal-700 font-extrabold text-lg">₱{initialSavings.toLocaleString()}</span>
                   </div>
                   <input 
                     type="range" 
@@ -756,7 +823,7 @@ export default function Home() {
                 <div>
                   <div className="flex justify-between items-end mb-3">
                     <label className="font-bold text-slate-700 text-xs uppercase tracking-wider">Monthly Contribution</label>
-                    <span className="text-teal-800 font-extrabold text-lg">₱{monthlyContribution.toLocaleString()}</span>
+                    <span className="text-teal-700 font-extrabold text-lg">₱{monthlyContribution.toLocaleString()}</span>
                   </div>
                   <input 
                     type="range" 
@@ -777,7 +844,7 @@ export default function Home() {
                 <div>
                   <div className="flex justify-between items-end mb-3">
                     <label className="font-bold text-slate-700 text-xs uppercase tracking-wider">Time Horizon</label>
-                    <span className="text-teal-800 font-extrabold text-lg">{years} Years</span>
+                    <span className="text-teal-700 font-extrabold text-lg">{years} Years</span>
                   </div>
                   <input 
                     type="range" 
@@ -798,7 +865,7 @@ export default function Home() {
                 <div>
                   <div className="flex justify-between items-end mb-3">
                     <label className="font-bold text-slate-700 text-xs uppercase tracking-wider">Projected Annual Return</label>
-                    <span className="text-teal-800 font-extrabold text-lg">{expectedReturn.toFixed(1)}%</span>
+                    <span className="text-teal-700 font-extrabold text-lg">{expectedReturn.toFixed(1)}%</span>
                   </div>
                   <input 
                     type="range" 
@@ -821,7 +888,7 @@ export default function Home() {
             <div className="lg:w-7/12 p-8 md:p-12 flex flex-col justify-between bg-white">
               <div className="mb-6">
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">Projected Future Value</p>
-                <h3 className="text-4xl sm:text-5xl font-black text-teal-850 tracking-tight">
+                <h3 className="text-4xl sm:text-5xl font-black text-teal-700 tracking-tight">
                   ₱{projectedTotal.toLocaleString()}
                 </h3>
               </div>
@@ -833,7 +900,7 @@ export default function Home() {
               <div className="mt-8 pt-6 border-t border-slate-100 text-center">
                 <button 
                   onClick={handleUnlockClick} 
-                  className="w-full bg-teal-800 hover:bg-teal-900 text-white py-4 px-10 rounded-2xl font-bold text-lg transition duration-200 shadow-xl shadow-teal-800/10 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full bg-teal-700 hover:bg-teal-800 text-white py-4 px-10 rounded-2xl font-bold text-lg transition duration-200 shadow-xl shadow-teal-700/10 cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Lock className="w-5 h-5 text-teal-300" />
                   Unlock Full 5-Pillar Dashboard
@@ -862,7 +929,7 @@ export default function Home() {
               </button>
 
               <div className="text-center mb-8">
-                <div className="mx-auto w-14 h-14 bg-teal-100 text-teal-750 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <div className="mx-auto w-14 h-14 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center mb-4 shadow-inner">
                   <Lock className="w-6 h-6" />
                 </div>
                 <h3 className="text-2xl font-extrabold text-slate-900">Unlock Full Assessment</h3>
@@ -895,31 +962,33 @@ export default function Home() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Mobile Number (Optional)</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Mobile Number *</label>
                   <input 
                     type="tel" 
+                    required
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
                     placeholder="0917-000-0000" 
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-700 focus:border-teal-700 outline-none transition bg-slate-50 focus:bg-white text-sm"
                   />
                 </div>
-                <div className="flex items-start pt-2">
+
+                <div className="flex items-start pt-1">
                   <input 
                     type="checkbox" 
                     required 
                     id="consent-check"
                     checked={consent}
                     onChange={(e) => setConsent(e.target.checked)}
-                    className="mt-1 h-5 w-5 text-teal-850 accent-teal-700 rounded border-slate-350 cursor-pointer"
+                    className="mt-1 h-5 w-5 text-teal-700 accent-teal-700 rounded border-slate-350 cursor-pointer"
                   />
                   <label htmlFor="consent-check" className="ml-3 text-xs text-slate-500 leading-relaxed cursor-pointer font-medium">
-                    I consent to having my baseline data calculated for financial gaps and agree to receiving my PDF assessment report via email.
+                    I consent to having my baseline data calculated for financial gaps and generating my downloadable PDF assessment report.
                   </label>
                 </div>
                 <button 
                   type="submit" 
-                  className="w-full bg-teal-800 hover:bg-teal-900 text-white py-4 rounded-xl font-bold text-md hover:shadow-lg transition shadow-md shadow-teal-900/10 mt-4 cursor-pointer"
+                  className="w-full bg-teal-700 hover:bg-teal-800 text-white py-4 rounded-xl font-bold text-md hover:shadow-lg transition shadow-md shadow-teal-900/10 mt-4 cursor-pointer"
                 >
                   Generate My Scorecard
                 </button>
@@ -935,20 +1004,20 @@ export default function Home() {
         >
           <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-10 border-b border-slate-250 pb-8 gap-6">
             <div>
-              <div className="inline-flex items-center gap-1 bg-teal-50 text-teal-800 text-xs font-extrabold px-3 py-1 rounded-full mb-3 uppercase tracking-wider">
+              <div className="inline-flex items-center gap-1 bg-teal-50 text-teal-700 text-xs font-extrabold px-3 py-1 rounded-full mb-3 uppercase tracking-wider">
                 <Unlock className="w-3 h-3" /> Fully Unlocked
               </div>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">Your Financial Scorecard</h2>
               <p className="text-slate-500 mt-2 text-md">Live analysis covering 5 core pillars of security and asset accumulation.</p>
             </div>
             
-            <div className="bg-cyan-50 border border-cyan-200/80 p-4 rounded-2xl flex items-center lg:min-w-[320px]">
-              <div className="w-12 h-12 bg-cyan-150 rounded-xl flex items-center justify-center text-2xl mr-4 shadow-inner">
+            <div className="bg-teal-50/80 border border-teal-200/80 p-4 rounded-2xl flex items-center lg:min-w-[320px]">
+              <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center text-2xl mr-4 shadow-inner">
                 🌱
               </div>
               <div>
-                <p className="text-[10px] text-cyan-600 font-extrabold uppercase tracking-widest">Financial Persona</p>
-                <p className="text-lg font-black text-cyan-950">The Growth Seeker</p>
+                <p className="text-[10px] text-teal-700 font-extrabold uppercase tracking-widest">Financial Persona</p>
+                <p className="text-lg font-black text-slate-900">The Growth Seeker</p>
               </div>
             </div>
           </div>
@@ -959,7 +1028,7 @@ export default function Home() {
               onClick={() => handleTabChange("tab-milestone")} 
               className={`px-6 py-3.5 rounded-full whitespace-nowrap text-sm font-bold transition cursor-pointer ${
                 activeTab === "tab-milestone" 
-                  ? "bg-teal-800 text-white shadow-lg shadow-teal-900/10" 
+                  ? "bg-teal-700 text-white shadow-lg shadow-teal-900/10" 
                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -969,7 +1038,7 @@ export default function Home() {
               onClick={() => handleTabChange("tab-retirement")} 
               className={`px-6 py-3.5 rounded-full whitespace-nowrap text-sm font-bold transition cursor-pointer ${
                 activeTab === "tab-retirement" 
-                  ? "bg-teal-800 text-white shadow-lg shadow-teal-900/10" 
+                  ? "bg-teal-700 text-white shadow-lg shadow-teal-900/10" 
                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -979,7 +1048,7 @@ export default function Home() {
               onClick={() => handleTabChange("tab-income")} 
               className={`px-6 py-3.5 rounded-full whitespace-nowrap text-sm font-bold transition cursor-pointer ${
                 activeTab === "tab-income" 
-                  ? "bg-teal-800 text-white shadow-lg shadow-teal-900/10" 
+                  ? "bg-teal-700 text-white shadow-lg shadow-teal-900/10" 
                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -987,19 +1056,24 @@ export default function Home() {
             </button>
             <button 
               onClick={() => handleTabChange("tab-education")} 
-              className={`px-6 py-3.5 rounded-full whitespace-nowrap text-sm font-bold transition cursor-pointer ${
+              className={`px-6 py-3.5 rounded-full whitespace-nowrap text-sm font-bold transition cursor-pointer flex items-center gap-2 ${
                 activeTab === "tab-education" 
-                  ? "bg-teal-800 text-white shadow-lg shadow-teal-900/10" 
+                  ? "bg-teal-700 text-white shadow-lg shadow-teal-900/10" 
                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
               }`}
             >
-              Education Fund
+              <span>Education Fund</span>
+              {!includeEducation && (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                  Skipped
+                </span>
+              )}
             </button>
             <button 
               onClick={() => handleTabChange("tab-health")} 
               className={`px-6 py-3.5 rounded-full whitespace-nowrap text-sm font-bold transition cursor-pointer ${
                 activeTab === "tab-health" 
-                  ? "bg-teal-800 text-white shadow-lg shadow-teal-900/10" 
+                  ? "bg-teal-700 text-white shadow-lg shadow-teal-900/10" 
                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -1014,17 +1088,17 @@ export default function Home() {
             {activeTab === "tab-milestone" && (
               <div className="grid lg:grid-cols-2 gap-10 items-center">
                 <div>
-                  <div className="inline-block bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4">Pillar 1</div>
+                  <div className="inline-block bg-teal-100 text-teal-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4">Pillar 1</div>
                   <h3 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900">Wealth Accumulation</h3>
                   <p className="text-slate-600 mb-6 text-base leading-relaxed">
                     Based on your inputs, your savings trajectory shows solid capital pooling. At <strong>{expectedReturn.toFixed(1)}%</strong> interest over <strong>{years} years</strong>, you are set to build <strong>₱{projectedTotal.toLocaleString()}</strong>.
                   </p>
                   
-                  <div className="p-5 bg-cyan-50/80 rounded-2xl border border-cyan-100 flex items-start">
+                  <div className="p-5 bg-teal-50/80 rounded-2xl border border-teal-100 flex items-start">
                     <span className="text-2xl mr-4">💡</span>
                     <div>
-                      <h4 className="font-bold text-cyan-950 text-sm">Advisor Insight</h4>
-                      <p className="text-xs text-cyan-800 mt-1.5 leading-relaxed">
+                      <h4 className="font-bold text-slate-900 text-sm">Advisor Insight</h4>
+                      <p className="text-xs text-teal-700 mt-1.5 leading-relaxed">
                         To lock in this return, consider allocating a portion of your cash reserves into tax-advantaged fixed income programs, securing compound yields against inflation.
                       </p>
                     </div>
@@ -1045,7 +1119,7 @@ export default function Home() {
               <div className="grid lg:grid-cols-2 gap-10">
                 {/* Left panel: Sliders */}
                 <div className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
-                  <div className="inline-block bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Pillar 2 - Inputs</div>
+                  <div className="inline-block bg-teal-100 text-teal-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Pillar 2 - Inputs</div>
                   <h3 className="text-xl font-bold text-slate-900 mt-2">Adjust Retirement Factors</h3>
                   
                   <div className="space-y-5">
@@ -1060,7 +1134,7 @@ export default function Home() {
                         max="70" 
                         value={clientAge} 
                         onChange={(e) => setClientAge(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
 
@@ -1075,7 +1149,7 @@ export default function Home() {
                         max="75" 
                         value={retirementAge} 
                         onChange={(e) => setRetirementAge(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
 
@@ -1091,7 +1165,7 @@ export default function Home() {
                         step="5000" 
                         value={retExpenses} 
                         onChange={(e) => setRetExpenses(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
 
@@ -1107,7 +1181,7 @@ export default function Home() {
                         step="1000" 
                         value={retPension} 
                         onChange={(e) => setRetPension(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
                   </div>
@@ -1115,7 +1189,7 @@ export default function Home() {
                   <button 
                     onClick={saveAssessment} 
                     disabled={isSaving}
-                    className="w-full bg-teal-800 text-white font-bold py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-900 cursor-pointer disabled:opacity-50 transition"
+                    className="w-full bg-teal-700 text-white font-bold py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-800 cursor-pointer disabled:opacity-50 transition"
                   >
                     {isSaving ? "Syncing..." : "Save Retirement Assessment"}
                   </button>
@@ -1131,7 +1205,7 @@ export default function Home() {
 
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-slate-55 border border-slate-200 rounded-2xl p-4 space-y-2">
-                        <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block mb-1">Option 1: Capitalization</span>
+                        <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider block mb-1">Option 1: Capitalization</span>
                         <div className="flex justify-between text-[11px]">
                           <span className="text-slate-550">Target:</span>
                           <span className="font-bold text-slate-900">₱{Math.round(retirementTarget).toLocaleString()}</span>
@@ -1160,8 +1234,8 @@ export default function Home() {
                       <h5 className="font-extrabold text-slate-800 uppercase tracking-wider">Method Comparison</h5>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-100/80">
-                          <h6 className="font-extrabold text-teal-950 mb-1">1. Capitalization Method</h6>
-                          <p className="text-[10px] text-teal-800 leading-relaxed">
+                          <h6 className="font-extrabold text-slate-950 mb-1">1. Capitalization Method</h6>
+                          <p className="text-[10px] text-teal-700 leading-relaxed">
                             <strong>Concept:</strong> Lives on interest, leaving principal intact.<br/>
                             <strong>Pro:</strong> Principal is never depleted; can be passed to heirs.<br/>
                             <strong>Con:</strong> Requires much higher starting capital.
@@ -1191,7 +1265,7 @@ export default function Home() {
               <div className="grid lg:grid-cols-2 gap-10">
                 {/* Left panel: Sliders */}
                 <div className="space-y-5 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
-                  <div className="inline-block bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Pillar 3 - Inputs</div>
+                  <div className="inline-block bg-teal-100 text-teal-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Pillar 3 - Inputs</div>
                   <h3 className="text-xl font-bold text-slate-900">Adjust Protection Factors</h3>
                   
                   <div className="space-y-4">
@@ -1249,7 +1323,7 @@ export default function Home() {
                         step="5000" 
                         value={protExpenses} 
                         onChange={(e) => setProtExpenses(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
 
@@ -1265,7 +1339,7 @@ export default function Home() {
                         step="50000" 
                         value={protLiabilities} 
                         onChange={(e) => setProtLiabilities(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
 
@@ -1281,7 +1355,7 @@ export default function Home() {
                         step="25000" 
                         value={protEmergency} 
                         onChange={(e) => setProtEmergency(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
 
@@ -1297,7 +1371,7 @@ export default function Home() {
                         step="100000" 
                         value={protExisting} 
                         onChange={(e) => setProtExisting(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
                   </div>
@@ -1305,7 +1379,7 @@ export default function Home() {
                   <button 
                     onClick={saveAssessment} 
                     disabled={isSaving}
-                    className="w-full bg-teal-800 text-white font-bold py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-900 cursor-pointer disabled:opacity-50 transition"
+                    className="w-full bg-teal-700 text-white font-bold py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-800 cursor-pointer disabled:opacity-50 transition"
                   >
                     {isSaving ? "Syncing..." : "Save Income Protection"}
                   </button>
@@ -1348,104 +1422,151 @@ export default function Home() {
 
             {/* Tab 4: Education Fund */}
             {activeTab === "tab-education" && (
-              <div className="grid lg:grid-cols-2 gap-10">
-                {/* Left panel: Sliders */}
-                <div className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
-                  <div className="inline-block bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Pillar 4 - Inputs</div>
-                  <h3 className="text-xl font-bold text-slate-900 mt-2">Adjust Education Factors</h3>
-                  
-                  <div className="space-y-5">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Child's First Name</label>
-                      <input 
-                        type="text" 
-                        value={childName} 
-                        onChange={(e) => setChildName(e.target.value)} 
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-700 font-bold"
-                        placeholder="Enter child's name"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
-                        <span>Child's Current Age</span>
-                        <span className="text-teal-700 font-extrabold">{childAge} Years Old</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="17" 
-                        value={childAge} 
-                        onChange={(e) => setChildAge(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
-                        <span>Chosen University Annual Tuition (Current Rate)</span>
-                        <span className="text-teal-700 font-extrabold">₱{annualTuition.toLocaleString()}</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="20000" 
-                        max="500000" 
-                        step="10000" 
-                        value={annualTuition} 
-                        onChange={(e) => setAnnualTuition(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
-                      />
-                    </div>
+              <div className="space-y-6">
+                {/* Skip Checkbox Toggle Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200 gap-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="skip-edu-tab"
+                      checked={!includeEducation}
+                      onChange={(e) => setIncludeEducation(!e.target.checked)}
+                      className="w-5 h-5 text-teal-700 accent-teal-700 rounded cursor-pointer"
+                    />
+                    <label htmlFor="skip-edu-tab" className="text-xs sm:text-sm font-extrabold text-slate-800 cursor-pointer">
+                      Skip Education Planning (Single / No children yet)
+                    </label>
                   </div>
-
-                  <button 
-                    onClick={saveAssessment} 
-                    disabled={isSaving}
-                    className="w-full bg-teal-800 text-white font-bold py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-900 cursor-pointer disabled:opacity-50 transition"
-                  >
-                    {isSaving ? "Syncing..." : "Save Education Assessment"}
-                  </button>
+                  {!includeEducation ? (
+                    <span className="text-[11px] font-black uppercase tracking-wider bg-slate-200 text-slate-700 px-3 py-1 rounded-full">
+                      Pillar Skipped
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-black uppercase tracking-wider bg-teal-100 text-teal-700 px-3 py-1 rounded-full">
+                      Pillar Active
+                    </span>
+                  )}
                 </div>
 
-                {/* Right panel: Output Gaps & Charts */}
-                <div className="flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-2xl font-extrabold text-slate-900 mb-2">Education Funding for <span className="text-teal-700">{childName}</span></h4>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                      Higher education tuition rates inflate at 8% annually. Your child will enter college in {yearsToCollege} years.
+                {!includeEducation ? (
+                  <div className="text-center py-16 px-6 bg-slate-50/70 rounded-3xl border border-slate-200/80 max-w-xl mx-auto space-y-4">
+                    <div className="w-16 h-16 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center mx-auto text-3xl font-bold shadow-inner">
+                      🎓
+                    </div>
+                    <h4 className="text-2xl font-extrabold text-slate-900">Education Planning is Skipped</h4>
+                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-md mx-auto">
+                      This pillar has been bypassed because you indicated you do not currently have dependent children. Your overall scorecard, insights diagnostic, and PDF report will focus purely on Retirement, Income Protection, and Wealth Accumulation.
                     </p>
-
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-2">
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">4-Year Program</span>
-                        <div className="flex justify-between text-xs">
-                          <span>Target Need:</span>
-                          <span className="font-bold text-slate-900">₱{Math.round(educationTarget4).toLocaleString()}</span>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => setIncludeEducation(true)}
+                        className="px-6 py-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition shadow-md cursor-pointer"
+                      >
+                        Enable Education Planning
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid lg:grid-cols-2 gap-10">
+                    {/* Left panel: Sliders */}
+                    <div className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
+                      <div className="inline-block bg-teal-100 text-teal-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Pillar 4 - Inputs</div>
+                      <h3 className="text-xl font-bold text-slate-900 mt-2">Adjust Education Factors</h3>
+                      
+                      <div className="space-y-5">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Child's First Name</label>
+                          <input 
+                            type="text" 
+                            value={childName} 
+                            onChange={(e) => setChildName(e.target.value)} 
+                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-700 font-bold"
+                            placeholder="Enter child's name"
+                          />
                         </div>
-                        <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
-                          <span className="font-bold text-red-600">Shortfall:</span>
-                          <span className="font-bold text-red-600">₱{Math.round(educationGap4).toLocaleString()}</span>
+
+                        <div>
+                          <div className="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
+                            <span>Child's Current Age</span>
+                            <span className="text-teal-700 font-extrabold">{childAge} Years Old</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="17" 
+                            value={childAge} 
+                            onChange={(e) => setChildAge(Number(e.target.value))} 
+                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
+                            <span>Chosen University Annual Tuition (Current Rate)</span>
+                            <span className="text-teal-700 font-extrabold">₱{annualTuition.toLocaleString()}</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="20000" 
+                            max="500000" 
+                            step="10000" 
+                            value={annualTuition} 
+                            onChange={(e) => setAnnualTuition(Number(e.target.value))} 
+                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
+                          />
                         </div>
                       </div>
 
-                      <div className="bg-teal-50 p-5 rounded-2xl border border-teal-100 space-y-2">
-                        <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider block">5-Year Program</span>
-                        <div className="flex justify-between text-xs">
-                          <span>Target Need:</span>
-                          <span className="font-bold text-slate-950">₱{Math.round(educationTarget5).toLocaleString()}</span>
+                      <button 
+                        onClick={saveAssessment} 
+                        disabled={isSaving}
+                        className="w-full bg-teal-700 text-white font-bold py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-800 cursor-pointer disabled:opacity-50 transition"
+                      >
+                        {isSaving ? "Syncing..." : "Save Education Assessment"}
+                      </button>
+                    </div>
+
+                    {/* Right panel: Output Gaps & Charts */}
+                    <div className="flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-2xl font-extrabold text-slate-900 mb-2">Education Funding for <span className="text-teal-700">{childName}</span></h4>
+                        <p className="text-xs text-slate-500 leading-relaxed mb-6">
+                          Higher education tuition rates inflate at 8% annually. Your child will enter college in {yearsToCollege} years.
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-2">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">4-Year Program</span>
+                            <div className="flex justify-between text-xs">
+                              <span>Target Need:</span>
+                              <span className="font-bold text-slate-900">₱{Math.round(educationTarget4).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
+                              <span className="font-bold text-red-600">Shortfall:</span>
+                              <span className="font-bold text-red-600">₱{Math.round(educationGap4).toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          <div className="bg-teal-50 p-5 rounded-2xl border border-teal-100 space-y-2">
+                            <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider block">5-Year Program</span>
+                            <div className="flex justify-between text-xs">
+                              <span>Target Need:</span>
+                              <span className="font-bold text-slate-950">₱{Math.round(educationTarget5).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-xs pt-1.5 border-t border-teal-100">
+                              <span className="font-bold text-red-600">Shortfall:</span>
+                              <span className="font-bold text-red-600">₱{Math.round(educationGap5).toLocaleString()}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-xs pt-1.5 border-t border-teal-100">
-                          <span className="font-bold text-red-600">Shortfall:</span>
-                          <span className="font-bold text-red-600">₱{Math.round(educationGap5).toLocaleString()}</span>
-                        </div>
+                      </div>
+
+                      <div className="chart-container w-full min-h-[300px] mt-auto">
+                        <canvas ref={educationChartRef} id="educationChart"></canvas>
                       </div>
                     </div>
                   </div>
-
-                  <div className="chart-container w-full min-h-[300px] mt-auto">
-                    <canvas ref={educationChartRef} id="educationChart"></canvas>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -1454,7 +1575,7 @@ export default function Home() {
               <div className="grid lg:grid-cols-2 gap-10">
                 {/* Left panel: Sliders */}
                 <div className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
-                  <div className="inline-block bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Pillar 5 - Inputs</div>
+                  <div className="inline-block bg-teal-100 text-teal-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Pillar 5 - Inputs</div>
                   <h3 className="text-xl font-bold text-slate-900 mt-2">Adjust Medical Buffers</h3>
                   
                   <div className="space-y-5">
@@ -1470,7 +1591,7 @@ export default function Home() {
                         step="100000" 
                         value={desiredHealth} 
                         onChange={(e) => setDesiredHealth(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
 
@@ -1486,7 +1607,7 @@ export default function Home() {
                         step="50000" 
                         value={existingHealth} 
                         onChange={(e) => setExistingHealth(Number(e.target.value))} 
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-800"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                       />
                     </div>
                   </div>
@@ -1494,7 +1615,7 @@ export default function Home() {
                   <button 
                     onClick={saveAssessment} 
                     disabled={isSaving}
-                    className="w-full bg-teal-800 text-white font-bold py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-900 cursor-pointer disabled:opacity-50 transition"
+                    className="w-full bg-teal-700 text-white font-bold py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-800 cursor-pointer disabled:opacity-50 transition"
                   >
                     {isSaving ? "Syncing..." : "Save Health Assessment"}
                   </button>
@@ -1534,8 +1655,8 @@ export default function Home() {
           </div>
 
           {/* Generate PDF summary Callout */}
-          <div className="mt-16 bg-gradient-to-br from-teal-950 via-teal-900 to-teal-850 rounded-3xl p-8 md:p-12 text-white text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-teal-600/20 rounded-full blur-3xl"></div>
+          <div className="mt-16 bg-gradient-to-br from-teal-950 via-teal-900 to-teal-800 rounded-3xl p-8 md:p-12 text-white text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-teal-700/20 rounded-full blur-3xl"></div>
             <div className="absolute -left-20 -top-20 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl"></div>
             
             <div className="relative z-10 max-w-2xl mx-auto">
@@ -1546,11 +1667,11 @@ export default function Home() {
               <button 
                 onClick={handlePdfDownload}
                 disabled={isPdfGenerating}
-                className="bg-white text-teal-950 hover:bg-slate-50 px-10 py-4 rounded-xl font-bold text-md transition shadow-xl w-full md:w-auto flex items-center justify-center gap-2 mx-auto disabled:opacity-50 cursor-pointer"
+                className="bg-white text-slate-950 hover:bg-slate-50 px-10 py-4 rounded-xl font-bold text-md transition shadow-xl w-full md:w-auto flex items-center justify-center gap-2 mx-auto disabled:opacity-50 cursor-pointer"
               >
                 {isPdfGenerating ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-teal-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-teal-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -1571,34 +1692,86 @@ export default function Home() {
         <section id="about" className="py-20 bg-white border-t border-slate-200">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row items-center gap-12 bg-slate-50 p-8 md:p-12 rounded-3xl border border-slate-100 shadow-sm">
-              <div className="w-40 h-40 bg-teal-100 rounded-full overflow-hidden shadow-xl shrink-0 flex items-center justify-center border-4 border-white">
-                <svg className="w-20 h-20 text-teal-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                </svg>
+              <div className="w-40 h-40 bg-teal-100 rounded-full overflow-hidden shadow-xl shrink-0 flex items-center justify-center border-4 border-white text-teal-700 font-black text-4xl">
+                {advisor?.avatarUrl ? (
+                  <img
+                    src={advisor.avatarUrl}
+                    alt={advisor.fullName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  advisor?.fullName ? advisor.fullName.charAt(0) : "F"
+                )}
               </div>
-              <div>
-                <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">Meet Your Licensed Advisor</h3>
-                <p className="text-teal-700 font-bold mb-4 uppercase tracking-wider text-xs">Sun Life Financial Representative</p>
-                <p className="text-slate-650 leading-relaxed mb-6 text-sm font-medium">
-                  Helping clients establish financial peace since 2016. I specialize in identifying insurance protection gaps, setting retirement goals, and compiling clear, math-driven assessments.
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                    {advisor?.fullName || "Meet Your Licensed Advisor"}
+                  </h3>
+                  {advisor?.advisorCode && (
+                    <span className="text-xs font-black bg-teal-100 text-teal-700 border border-teal-200 px-2.5 py-1 rounded-md">
+                      {advisor.advisorCode}
+                    </span>
+                  )}
+                </div>
+                <p className="text-teal-700 font-bold mb-3 uppercase tracking-wider text-xs">
+                  {advisor?.title || "Licensed Financial & Wealth Consultant"}
                 </p>
-                <div className="flex gap-4">
-                  <button 
-                    onClick={() => triggerToast("External Link", "Advisor LinkedIn Profile simulated.")} 
-                    className="text-teal-800 font-bold hover:text-teal-950 transition flex items-center gap-1.5 text-sm cursor-pointer"
-                  >
-                    <svg className="w-4 h-4 text-teal-700" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                    </svg>
-                    LinkedIn Profile
-                  </button>
-                  <button 
-                    onClick={() => triggerToast("External Link", "Meeting scheduler simulated.")} 
-                    className="text-teal-800 font-bold hover:text-teal-950 transition flex items-center gap-1.5 text-sm cursor-pointer"
-                  >
-                    <Calendar className="w-4 h-4 text-teal-700" />
-                    Schedule a consultation
-                  </button>
+                <p className="text-slate-650 leading-relaxed mb-6 text-sm font-medium">
+                  Helping clients establish financial peace and wealth clarity. I specialize in identifying insurance protection gaps, setting retirement goals, and compiling clear, math-driven assessments.
+                </p>
+                
+                <div className="flex flex-wrap gap-4 text-xs">
+                  {advisor?.phone && (
+                    <div className="flex items-center gap-1.5 text-slate-700 font-semibold bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                      <Phone className="w-3.5 h-3.5 text-teal-700" />
+                      <span>{advisor.phone}</span>
+                    </div>
+                  )}
+                  {advisor?.email && (
+                    <div className="flex items-center gap-1.5 text-slate-700 font-semibold bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                      <Mail className="w-3.5 h-3.5 text-teal-700" />
+                      <span>{advisor.email}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-4 mt-6">
+                  {advisor?.linkedinUrl ? (
+                    <a 
+                      href={advisor.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-teal-700 font-bold hover:text-slate-950 transition flex items-center gap-1.5 text-sm cursor-pointer"
+                    >
+                      <svg className="w-4 h-4 text-teal-700" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                      </svg>
+                      LinkedIn Profile
+                    </a>
+                  ) : null}
+                  {advisor?.calendlyUrl ? (
+                    <a 
+                      href={advisor.calendlyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition shadow-md"
+                    >
+                      <Calendar className="w-4 h-4 text-teal-200" />
+                      Schedule a Consultation
+                    </a>
+                  ) : (
+                    <button 
+                      onClick={() => triggerToast("Direct Contact", `Please reach out to ${advisor?.fullName || "your advisor"} at ${advisor?.email || "advisor@projectkintsugi.com"}`)} 
+                      className="text-teal-700 font-bold hover:text-slate-950 transition flex items-center gap-1.5 text-sm cursor-pointer"
+                    >
+                      <Calendar className="w-4 h-4 text-teal-700" />
+                      Schedule a Consultation
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1607,11 +1780,62 @@ export default function Home() {
 
       </main>
 
+      {/* 48-Hour Deep-Dive Insights Prompt Modal */}
+      {showInsightsModal && insightsUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 text-white max-w-lg w-full p-6 sm:p-8 rounded-3xl shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-teal-600/10 text-teal-400 rounded-xl flex items-center justify-center border border-teal-500/20">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-teal-400 bg-teal-600/10 px-2 py-0.5 rounded-full">
+                  VIP Extended Access
+                </span>
+                <h3 className="text-xl font-black text-white mt-1">48-Hour Deep-Dive Insights Ready</h3>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-300 mb-6 leading-relaxed">
+              We&apos;ve unlocked your full multi-module FNA dashboard below, and also generated an <strong>Extended Strategy Brief</strong> with inflation stress-testing and prioritized action steps.
+            </p>
+
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-6 space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-amber-400 font-bold">
+                <Clock className="w-4 h-4" />
+                <span>Active 48-Hour Secure Access Link</span>
+              </div>
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                You can view your deep-dive diagnostic now, and a copy has also been indexed for your assigned advisor <strong>{advisor?.fullName || "Freya Gonzales"}</strong>.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a
+                href={insightsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-black transition shadow-lg shadow-teal-900/40"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open Extended Strategy Brief
+              </a>
+              <button
+                onClick={() => setShowInsightsModal(false)}
+                className="px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition"
+              >
+                Continue to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="bg-slate-950 text-slate-400 py-12 border-t border-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center text-xs">
           <div className="mb-4 md:mb-0 flex items-center">
-            <div className="w-6 h-6 bg-teal-850 rounded mr-2 flex items-center justify-center text-white font-black text-xs shadow-inner">F</div>
+            <div className="w-6 h-6 bg-teal-700 rounded mr-2 flex items-center justify-center text-white font-black text-xs shadow-inner">F</div>
             <span>&copy; 2026 FreyaFNA. All Rights Reserved.</span>
           </div>
           <div className="flex space-x-6">
@@ -1628,7 +1852,7 @@ export default function Home() {
       {/* Global Toast System */}
       {toast.visible && (
         <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 z-[110] flex items-center border-l-4 border-teal-500 max-w-sm animate-bounce">
-          <div className="w-8 h-8 bg-teal-500/20 rounded-full flex items-center justify-center mr-3 shrink-0">
+          <div className="w-8 h-8 bg-teal-600/20 rounded-full flex items-center justify-center mr-3 shrink-0">
             <Check className="w-4 h-4 text-teal-400" />
           </div>
           <div>

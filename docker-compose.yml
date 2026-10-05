@@ -12,6 +12,22 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:postgres_secure_password_123@shared-postgres:5432/kintsugi_db
       - NODE_ENV=production
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - EMAIL_FROM=FreyaFNA <noreply@freyafna.com>
+      - APP_URL=http://localhost:3005
+    networks:
+      - netowaku-app-network
+    depends_on:
+      - mailpit
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: kintsugi-mailpit
+    restart: always
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI
     networks:
       - netowaku-app-network
 

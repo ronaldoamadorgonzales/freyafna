@@ -401,7 +401,7 @@ fna/
 │   │   │       └── route.ts      # Lead assignment / notes management
 │   │   ├── dashboard/
 │   │   │   └── page.tsx          # Gated User Dashboard
-│   │   ├── advisor-portal/
+│   │   ├── portal/
 │   │   │   └── page.tsx          # Advisor lead view and routing
 │   │   ├── layout.tsx            # Global layout wrapper
 │   │   └── page.tsx              # Public Landing Page & Free module selector

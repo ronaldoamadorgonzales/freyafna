@@ -8,6 +8,20 @@
       "when": 1783490242902,
       "tag": "0000_pretty_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783587327155,
+      "tag": "0001_cold_speedball",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783589528766,
+      "tag": "0002_strange_pride",
+      "breakpoints": true
     }
   ]
 }
