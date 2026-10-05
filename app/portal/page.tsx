@@ -1532,7 +1532,7 @@ export default function AdvisorPortal() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Phone Number</label>
                   <input
@@ -1550,6 +1550,16 @@ export default function AdvisorPortal() {
                     value={advisorForm.calendlyUrl}
                     onChange={(e) => setAdvisorForm({ ...advisorForm, calendlyUrl: e.target.value })}
                     placeholder="https://calendly.com/your-name"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">LinkedIn Profile URL</label>
+                  <input
+                    type="url"
+                    value={advisorForm.linkedinUrl}
+                    onChange={(e) => setAdvisorForm({ ...advisorForm, linkedinUrl: e.target.value })}
+                    placeholder="https://linkedin.com/in/your-profile"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500 transition"
                   />
                 </div>
