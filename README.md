@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FreyaFNA — Financial Needs Analysis (FNA) Platform
 
-## Getting Started
+> **Live Production:** [https://freyafna.com](https://freyafna.com) | [https://www.freyafna.com](https://www.freyafna.com)
 
-First, run the development server:
+A high-conversion financial needs analysis and lead qualification platform built with **Next.js 16 (App Router)**, **React 19**, **TypeScript**, **Tailwind CSS v4**, **Neon PostgreSQL**, **Drizzle ORM**, **Resend**, and containerized **Chromium for PDF generation**.
+
+---
+
+## 🏗️ Production Architecture & Stack
+
+* **Hosting & Compute:** **Vercel** Serverless Platform with automated deployments.
+* **Database:** **Neon Serverless PostgreSQL** with `@neondatabase/serverless` WebSocket connection pooling and ACID transaction support.
+* **Transactional Email:** **Resend SMTP** (`smtp.resend.com`) delivering 48-Hour VIP Strategy Brief links and advisor notifications.
+* **Source Control & CI/CD:** **GitHub** repository (`ronaldoamadorgonzales/freyafna.git`) with automatic Vercel production deployment triggers on `main`.
+* **PDF Report Generation:** Serverless Chromium via `@sparticuz/chromium` and `puppeteer-core` with automated binary pack inflation and 60s max execution duration.
+
+---
+
+## 🚀 Local Development
+
+1. **Clone repository:**
+   ```bash
+   git clone git@github.com:ronaldoamadorgonzales/freyafna.git
+   cd fna
+   ```
+
+2. **Environment Variables:**
+   Copy `.env.example` to `.env` and fill in your Neon `DATABASE_URL`, `SESSION_SECRET`, and Resend SMTP credentials:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Install Dependencies & Start Dev Server:**
+   ```bash
+   npm install
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🧪 Testing & Verification
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Run unit and integration tests (Vitest)
+npm test
+
+# Verify production build & types
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🔒 Git & Deployment Workflow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `main` is linked to Vercel production.
+- Develop all features, fixes, and docs on isolated branches (`feat/...`, `fix/...`, or `docs/...`).
+- Run `npm test` and `npm run build` prior to merging.
+- Confirm changes before pushing to `main`.
