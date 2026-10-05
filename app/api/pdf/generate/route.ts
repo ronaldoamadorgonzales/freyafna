@@ -1,8 +1,43 @@
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import puppeteerCore from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import { db } from "@/lib/db/db";
 import { advisors } from "@/lib/db/schema";
 import { eq, ilike, and } from "drizzle-orm";
+
+async function getBrowser() {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    const executablePath = await chromium.executablePath();
+    return await puppeteerCore.launch({
+      args: chromium.args,
+      defaultViewport: (chromium as any).defaultViewport,
+      executablePath,
+      headless: (chromium as any).headless,
+    });
+  }
+
+  try {
+    const puppeteer = (await import("puppeteer")).default;
+    return await puppeteer.launch({
+      headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
+    });
+  } catch {
+    const executablePath = await chromium.executablePath();
+    return await puppeteerCore.launch({
+      args: chromium.args,
+      defaultViewport: (chromium as any).defaultViewport,
+      executablePath,
+      headless: (chromium as any).headless,
+    });
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -58,18 +93,8 @@ export async function POST(request: Request) {
       minute: "2-digit",
     });
 
-    // Launch Headless Chromium
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-      ],
-    });
-
+    // Launch Headless Chromium (Universal: Vercel Serverless / Local Docker)
+    const browser = await getBrowser();
     const page = await browser.newPage();
 
     // Calculate dynamic values for the PDF template based on custom user inputs
