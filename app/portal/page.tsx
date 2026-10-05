@@ -1479,32 +1479,6 @@ export default function AdvisorPortal() {
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500 transition"
                       />
                     </div>
-
-                    {/* Quick Preset Avatars */}
-                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                      <span className="text-[10px] text-slate-400 font-semibold">Sample:</span>
-                      <button
-                        type="button"
-                        onClick={() => setAdvisorForm({ ...advisorForm, avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80" })}
-                        className="text-[10px] px-2 py-0.5 rounded bg-white hover:bg-teal-50 text-slate-700 hover:text-teal-700 border border-slate-200 transition cursor-pointer font-medium"
-                      >
-                        Female 1
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAdvisorForm({ ...advisorForm, avatarUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop&q=80" })}
-                        className="text-[10px] px-2 py-0.5 rounded bg-white hover:bg-teal-50 text-slate-700 hover:text-teal-700 border border-slate-200 transition cursor-pointer font-medium"
-                      >
-                        Male 1
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAdvisorForm({ ...advisorForm, avatarUrl: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80" })}
-                        className="text-[10px] px-2 py-0.5 rounded bg-white hover:bg-teal-50 text-slate-700 hover:text-teal-700 border border-slate-200 transition cursor-pointer font-medium"
-                      >
-                        Female 2
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1542,7 +1516,7 @@ export default function AdvisorPortal() {
                     required
                     value={advisorForm.email}
                     onChange={(e) => setAdvisorForm({ ...advisorForm, email: e.target.value })}
-                    placeholder="e.g. arthur@projectkintsugi.com"
+                    placeholder="e.g. arthur@freyafna.com"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500 transition"
                   />
                 </div>

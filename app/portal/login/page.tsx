@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, AlertCircle, Eye, EyeOff, Sparkles } from "lucide-react";
+import { Lock, Mail, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 export default function AdvisorLogin() {
   const router = useRouter();
@@ -87,7 +87,7 @@ export default function AdvisorLogin() {
                   id="email"
                   type="email"
                   required
-                  placeholder="name@projectkintsugi.com"
+                  placeholder="advisor@freyafna.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
@@ -141,26 +141,6 @@ export default function AdvisorLogin() {
               )}
             </button>
           </form>
-        </div>
-
-        {/* Demo Credentials Info Box */}
-        <div className="mt-6 bg-slate-100/50 border border-slate-200/80 rounded-2xl p-4 text-xs text-slate-500 space-y-2 shadow-sm">
-          <div className="font-bold text-slate-700 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-teal-700" />
-            Quick Demo Accounts
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-[11px] leading-relaxed">
-            <div>
-              <p className="font-semibold text-slate-600">Admin Role:</p>
-              <p className="text-slate-500 truncate select-all">freya.gonzales@projectkintsugi.com</p>
-              <p className="text-slate-500">Pass: <code className="text-slate-600 select-all font-semibold">admin123</code></p>
-            </div>
-            <div>
-              <p className="font-semibold text-slate-600">Advisor Role:</p>
-              <p className="text-slate-500 truncate select-all">arthur.pendragon@projectkintsugi.com</p>
-              <p className="text-slate-500">Pass: <code className="text-slate-600 select-all font-semibold">advisor123</code></p>
-            </div>
-          </div>
         </div>
       </div>
     </main>
